@@ -1,1 +1,1 @@
-print("this is for hear disease prediction project of Machine learning ")
+print("this is for heart disease prediction project of Machine learning ")
