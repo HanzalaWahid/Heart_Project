@@ -1,23 +1,94 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import matplotlib.pyplot as plt
-import seaborn as sns
 import os
 from src.visualize import plot_confusion_matrix, plot_roc_curve, plot_feature_importance
 
-# Set page configuration
+# -------------------- Configuration & Styling --------------------
+
 st.set_page_config(
-    page_title="Heart Disease Prediction",
+    page_title="HeartGuard AI | Predictive Analytics",
+    page_icon="❤️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# Custom CSS for a professional, modern look
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    h1, h2, h3 {
+        color: #2C3E50;
+        font-weight: 700;
+    }
+    
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #f8f9fa;
+        border-right: 1px solid #e9ecef;
+    }
+    
+    /* Card-like containers for inputs */
+    .stNumberInput, .stSelectbox {
+        background-color: white;
+        border-radius: 8px;
+    }
+    
+    /* Metric Cards */
+    div[data-testid="metric-container"] {
+        background-color: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+    }
+    
+    /* Highlight the prediction button */
+    div.stButton > button {
+        background-color: #FF4B4B;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        width: 100%;
+        transition: all 0.3s ease;
+    }
+    div.stButton > button:hover {
+        background-color: #FF3333;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    /* Result container styling */
+    .result-card {
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        margin-top: 20px;
+    }
+    .high-risk {
+        background-color: #fde8e8;
+        border: 1px solid #fbd5d5;
+        color: #9b1c1c;
+    }
+    .low-risk {
+        background-color: #def7ec;
+        border: 1px solid #bcf0da;
+        color: #03543f;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# -------------------- Setup & Data Loading --------------------
+
 # Constants
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'heart.csv')
-
-# -------------------- Load Models & Data --------------------
 
 @st.cache_resource
 def load_resources():
@@ -30,129 +101,212 @@ def load_resources():
         scaler = joblib.load(os.path.join(MODEL_DIR, 'scaler.pkl'))
         return models, scaler
     except FileNotFoundError as e:
-        st.error(f"Error loading models: {e}")
+        st.error(f"Error loading resources: {e}")
+        st.stop()
         return None, None
 
 @st.cache_data
 def load_dataset():
     try:
-        df = pd.read_csv(DATA_PATH)
-        return df
+        return pd.read_csv(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Dataset not found at {DATA_PATH}")
+        st.stop()
         return None
 
 models, scaler = load_resources()
 df = load_dataset()
-
-if models is None or df is None:
-    st.stop()
-
 feature_names = df.drop("target", axis=1).columns.tolist()
 
 # -------------------- Sidebar Controls --------------------
 
+st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2966/2966486.png", width=100)
 st.sidebar.title("Configuration")
-model_choice = st.sidebar.selectbox("Select Model", list(models.keys()))
+st.sidebar.markdown("---")
+
+model_choice = st.sidebar.selectbox(
+    "Select Prediction Model", 
+    list(models.keys()),
+    help="Choose the machine learning algorithm to perform the prediction."
+)
 model = models[model_choice]
 
-st.title("Heart Disease Prediction Dashboard")
-st.markdown("Provide patient details below to assess the risk of heart disease.")
+st.sidebar.info(
+    """
+    **Model Insights:**
+    - **Logistic Regression**: Linear classification, interpretable.
+    - **Random Forest**: Ensemble method, high accuracy.
+    - **SVM**: Effective in high-dimensional spaces.
+    """
+)
 
-# -------------------- User Input --------------------
+st.sidebar.markdown("---")
+st.sidebar.markdown("© 2025 HeartGuard AI")
 
-def get_user_input(df, feature_names):
+# -------------------- Main Interface --------------------
+
+st.title("❤️ HeartGuard AI")
+st.markdown("### Intelligent Heart Disease Risk Assessment")
+st.markdown("Enter patient clinical data below to generate a real-time risk assessment using advanced machine learning models.")
+
+st.divider()
+
+# -------------------- User Inputs (Grouped) --------------------
+
+def get_user_input(df):
     input_data = {}
     
-    col1, col2, col3 = st.columns(3)
+    # --- Group 1: Personal & Vitals ---
+    st.subheader("👤 Personal Details & Vitals")
+    c1, c2, c3, c4 = st.columns(4)
     
-    # Distribute fields across columns
-    fields = feature_names
-    
-    for i, feature in enumerate(fields):
-        # Determine column
-        if i % 3 == 0:
-            c = col1
-        elif i % 3 == 1:
-            c = col2
-        else:
-            c = col3
-            
-        with c:
-            median_val = df[feature].median()
+    with c1:
+        age_med = int(df['age'].median())
+        age = st.number_input("Age (years)", min_value=1, max_value=120, value=age_med, step=1)
+        input_data['age'] = age
+        
+    with c2:
+        sex_idx = int(df['sex'].median())
+        sex = st.selectbox("Sex", options=[0, 1], format_func=lambda x: "Male" if x == 1 else "Female", index=sex_idx)
+        input_data['sex'] = sex
+        
+    with c3:
+        trestbps_med = int(df['trestbps'].median())
+        trestbps = st.number_input("Resting BP (mm Hg)", min_value=50, max_value=300, value=trestbps_med, help="Resting blood pressure on admission to the hospital")
+        input_data['trestbps'] = trestbps
+        
+    with c4:
+        chol_med = int(df['chol'].median())
+        chol = st.number_input("Cholesterol (mg/dl)", min_value=100, max_value=600, value=chol_med)
+        input_data['chol'] = chol
 
-            if feature in ["age", "trestbps", "chol", "thalach"]:
-                val = st.number_input(
-                    f"{feature.replace('_', ' ').title()}", 
-                    min_value=int(df[feature].min()), 
-                    max_value=int(df[feature].max()),
-                    value=int(median_val), 
-                    step=1
-                )
-            elif feature == "sex":
-                val = st.selectbox("Sex", options=[0, 1], format_func=lambda x: "Male" if x == 1 else "Female", index=int(median_val))
-            elif feature == "fbs":
-                val = st.selectbox("Fasting Blood Sugar > 120 mg/dl", options=[0, 1], format_func=lambda x: "True" if x == 1 else "False", index=int(median_val))
-            elif feature == "exang":
-                val = st.selectbox("Exercise Induced Angina", options=[0, 1], format_func=lambda x: "Yes" if x == 1 else "No", index=int(median_val))
-            elif feature == "cp":
-                val = st.selectbox("Chest Pain Type", options=[0, 1, 2, 3], index=int(median_val), help="0: Typical Angina, 1: Atypical Angina, 2: Non-anginal Pain, 3: Asymptomatic")
-            elif feature == "restecg":
-                val = st.selectbox("Resting ECG Results", options=[0, 1, 2], index=int(median_val))
-            elif feature == "slope":
-                val = st.selectbox("Slope of Peak Exercise ST Segment", options=[0, 1, 2], index=int(median_val))
-            elif feature == "ca":
-                val = st.selectbox("Number of Major Vessels (0-3)", options=[0, 1, 2, 3], index=int(median_val))
-            elif feature == "thal":
-                val = st.selectbox("Thalassemia", options=[0, 1, 2, 3], index=int(median_val))
-            elif feature == "oldpeak":
-                val = st.number_input("ST Depression (Oldpeak)", min_value=0.0, max_value=float(df[feature].max()), value=float(median_val), step=0.1)
-            else:
-                val = st.number_input(f"{feature.title()}", value=float(median_val))
-            
-            input_data[feature] = val
+    # --- Group 2: Heart & Chest ---
+    st.markdown("---")
+    st.subheader("🫀 Cardiac Symptoms")
+    c5, c6, c7, c8 = st.columns(4)
+    
+    with c5:
+        cp_idx = int(df['cp'].median())
+        cp = st.selectbox("Chest Pain Type", options=[0, 1, 2, 3], index=cp_idx, 
+                          format_func=lambda x: f"Type {x}" if x==0 else f"Type {x}",
+                          help="0: Typical Angina, 1: Atypical Angina, 2: Non-anginal, 3: Asymptomatic")
+        input_data['cp'] = cp
+        
+    with c6:
+        thalach_med = int(df['thalach'].median())
+        thalach = st.number_input("Max Heart Rate", min_value=50, max_value=250, value=thalach_med)
+        input_data['thalach'] = thalach
+        
+    with c7:
+        exang_idx = int(df['exang'].median())
+        exang = st.selectbox("Exercise Angina", options=[0, 1], format_func=lambda x: "Yes" if x == 1 else "No", index=exang_idx)
+        input_data['exang'] = exang
+        
+    with c8:
+        oldpeak_med = float(df['oldpeak'].median())
+        oldpeak = st.number_input("ST Depression", min_value=0.0, max_value=10.0, value=oldpeak_med, step=0.1)
+        input_data['oldpeak'] = oldpeak
+
+    # --- Group 3: Medical/Other ---
+    st.markdown("---")
+    st.subheader("🧪 Medical History & Tests")
+    c9, c10, c11, c12 = st.columns(4)
+    
+    with c9:
+        fbs_idx = int(df['fbs'].median())
+        fbs = st.selectbox("Fasting BS > 120", options=[0, 1], format_func=lambda x: "True" if x == 1 else "False", index=fbs_idx)
+        input_data['fbs'] = fbs
+        
+    with c10:
+        restecg_idx = int(df['restecg'].median())
+        restecg = st.selectbox("Resting ECG", options=[0, 1, 2], index=restecg_idx, help="0: Normal, 1: ST-T wave abnormality, 2: Left ventricular hypertrophy")
+        input_data['restecg'] = restecg
+        
+    with c11:
+        slope_idx = int(df['slope'].median())
+        slope = st.selectbox("ST Slope", options=[0, 1, 2], index=slope_idx)
+        input_data['slope'] = slope
+        
+    with c12:
+        thal_idx = int(df['thal'].median())
+        thal = st.selectbox("Thalassemia", options=[0, 1, 2, 3], index=thal_idx)
+        input_data['thal'] = thal
+        
+    # Extra field
+    ca_idx = int(df['ca'].median())
+    ca = st.selectbox("Major Vessels Colored (0-3)", options=[0, 1, 2, 3], index=ca_idx)
+    input_data['ca'] = ca
 
     return pd.DataFrame([input_data])
 
-user_input_df = get_user_input(df, feature_names)
+user_input_df = get_user_input(df)
 
-# -------------------- Prediction --------------------
+st.markdown("<br>", unsafe_allow_html=True)
 
-if st.button("Predict", type="primary"):
-    with st.spinner("Analyzing..."):
+# -------------------- Prediction Logic --------------------
+
+col_but1, col_but2, col_but3 = st.columns([1, 2, 1])
+with col_but2:
+    predict_btn = st.button("🚀 Analyze Risk Factor", type="primary", use_container_width=True)
+
+if predict_btn:
+    with st.spinner("Processing clinical data..."):
         try:
+            # Reorder columns to match training data
+            user_input_df = user_input_df[feature_names]
+            
             input_scaled = scaler.transform(user_input_df)
             prediction = model.predict(input_scaled)[0]
             
             if hasattr(model, "predict_proba"):
                 prob = model.predict_proba(input_scaled)[0][1]
             else:
-                # Use decision function and normalize if needed, or just skip probability
                 prob = None
 
-            st.divider()
+            # --- Result Display ---
+            st.markdown("<br>", unsafe_allow_html=True)
+            res_c1, res_c2 = st.columns(2)
             
-            res_col1, res_col2 = st.columns(2)
-            
-            with res_col1:
-                st.subheader("Prediction Result")
+            with res_c1:
                 if prediction == 1:
-                    st.error("High Risk of Heart Disease")
+                    st.markdown(
+                        f"""
+                        <div class="result-card high-risk">
+                            <h3>⚠️ High Risk Detected</h3>
+                            <p>The model predicts a high probability of heart disease.</p>
+                        </div>
+                        """, unsafe_allow_html=True
+                    )
                 else:
-                    st.success("Low Risk of Heart Disease")
+                    st.markdown(
+                        f"""
+                        <div class="result-card low-risk">
+                            <h3>✅ Low Risk Detected</h3>
+                            <p>The model predicts a low probability of heart disease.</p>
+                        </div>
+                        """, unsafe_allow_html=True
+                    )
             
-            if prob is not None:
-                with res_col2:
-                    st.subheader("Probability")
-                    st.metric(label="Risk Probability", value=f"{prob:.2%}")
+            with res_c2:
+                if prob is not None:
+                    st.metric(
+                        label="Risk Probability", 
+                        value=f"{prob:.1%}", 
+                        delta="High Condition" if prob > 0.5 else "Stable",
+                        delta_color="inverse"
+                    )
+                    st.progress(prob)
+                else:
+                    st.info("Probability score not available for this model.")
 
         except Exception as e:
-            st.error(f"An error occurred during prediction: {e}")
+            st.error(f"An error occurred: {e}")
 
-# -------------------- Model Evaluation --------------------
+# -------------------- Analytics Section --------------------
 
-with st.expander("Show Model Performance Details"):
-    st.subheader(f"Performance Metrics: {model_choice}")
+st.markdown("---")
+with st.expander("📊 View Model Performance Analytics", expanded=False):
+    st.subheader(f"Model Diagnostics: {model_choice}")
     
     # Prepare test data (fixed split for consistency)
     from sklearn.model_selection import train_test_split
@@ -162,21 +316,15 @@ with st.expander("Show Model Performance Details"):
     X_test_scaled = scaler.transform(X_test)
     y_pred = model.predict(X_test_scaled)
     
-    # Feature Importance
-    if model_choice == "Random Forest":
-        st.write("#### Feature Importance")
-        fig_imp = plot_feature_importance(model.feature_importances_, feature_names, model_name=model_choice)
-        st.pyplot(fig_imp)
-
-    col_eval1, col_eval2 = st.columns(2)
+    tab1, tab2, tab3 = st.tabs(["Confusion Matrix", "ROC Curve", "Feature Importance"])
     
-    with col_eval1:
-        st.write("#### Confusion Matrix")
+    with tab1:
+        st.caption("Visualizes the performance of the classification model.")
         fig_cm = plot_confusion_matrix(y_test, y_pred, model_name=model_choice)
         st.pyplot(fig_cm)
         
-    with col_eval2:
-        st.write("#### ROC Curve")
+    with tab2:
+        st.caption("Illustrates the diagnostic ability of the binary classifier.")
         try:
             if hasattr(model, "predict_proba"):
                 y_probs = model.predict_proba(X_test_scaled)[:, 1]
@@ -186,6 +334,12 @@ with st.expander("Show Model Performance Details"):
             fig_roc = plot_roc_curve(y_test, y_probs, model_name=model_choice)
             st.pyplot(fig_roc)
         except Exception as e:
-            st.info("ROC Curve not available for this model configuration.")
-
-
+            st.warning("ROC Curve not available.")
+            
+    with tab3:
+        if model_choice == "Random Forest":
+            st.caption("Shows which features most contributed to the model's decision.")
+            fig_imp = plot_feature_importance(model.feature_importances_, feature_names, model_name=model_choice)
+            st.pyplot(fig_imp)
+        else:
+            st.info("Feature Importance is only available for Random Forest models in this dashboard.")
