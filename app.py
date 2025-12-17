@@ -188,3 +188,4 @@ with st.expander("Show Model Performance Details"):
         except Exception as e:
             st.info("ROC Curve not available for this model configuration.")
 
+
