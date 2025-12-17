@@ -51,15 +51,27 @@ st.markdown("""
         color: white;
     }
     
-    /* Input field text color override */
+    /* Fix Input Label Alignment & Padding */
+    .stNumberInput label, .stSelectbox label {
+        min-height: 45px;
+        display: flex;
+        align-items: flex-end;
+        padding-bottom: 5px;
+        padding-left: 5px; /* Add padding to prevent edge sticking */
+        font-size: 0.95rem;
+    }
+    
+    /* Input field text color override & Padding */
     div[data-baseweb="select"] > div, 
     input[type="number"] {
         color: white !important;
         background-color: #262730 !important;
+        padding-left: 10px !important; /* Internal text padding */
     }
-    
-    label {
-        color: #FAFAFA !important;
+
+    /* Adjust container padding */
+    div[data-testid="stVerticalBlock"] > div {
+        margin-bottom: 15px; 
     }
 
     /* Metric Cards */
@@ -77,6 +89,8 @@ st.markdown("""
         color: white;
         border: 1px solid #444;
     }
+    
+
     
     /* Highlight the prediction button */
     div.stButton > button {
@@ -161,14 +175,19 @@ model_choice = st.sidebar.selectbox(
 )
 model = models[model_choice]
 
-st.sidebar.info(
-    """
-    **Model Insights:**
-    - **Logistic Regression**: Linear classification, interpretable.
-    - **Random Forest**: Ensemble method, high accuracy.
-    - **SVM**: Effective in high-dimensional spaces.
-    """
-)
+with st.sidebar.expander("ℹ️ Model Insights", expanded=False):
+    st.markdown(
+        """
+        **Logistic Regression**
+        *Linear classification, interpretable.*
+        
+        **Random Forest**
+        *Ensemble method, high accuracy.*
+        
+        **SVM**
+        *Effective in high-dimensional spaces.*
+        """
+    )
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("© 2025 HeartGuard AI")
