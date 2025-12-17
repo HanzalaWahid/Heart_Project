@@ -29,8 +29,19 @@ st.markdown("""
     
     /* Sidebar Styling */
     section[data-testid="stSidebar"] {
-        background-color: #f8f9fa;
-        border-right: 1px solid #e9ecef;
+        background-color: #0E1117; /* Dark Streamlit-like background */
+        border-right: 1px solid #262730;
+    }
+    
+    /* Sidebar Text */
+    section[data-testid="stSidebar"] h1, 
+    section[data-testid="stSidebar"] h2, 
+    section[data-testid="stSidebar"] h3, 
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] div,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] .stMarkdown {
+        color: #FAFAFA !important;
     }
     
     /* Card-like containers for inputs */
