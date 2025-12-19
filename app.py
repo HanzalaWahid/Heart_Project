@@ -56,7 +56,7 @@ def load_models_and_scaler():
 @st.cache_data(show_spinner=False)
 def load_dataset():
     if not DATA_PATH.exists():
-        raise FileNotFoundError("heart.csv not found in /data folder")
+        raise FileNotFoundError("heart.csv not found in data folder")
     return pd.read_csv(DATA_PATH)
 
 # ============================ Startup ============================
@@ -72,7 +72,7 @@ TARGET_COL = "target"
 FEATURE_NAMES = df.drop(columns=[TARGET_COL]).columns.tolist()
 
 # ============================ Sidebar ============================
-st.sidebar.title("⚙️ Configuration")
+st.sidebar.title("Configuration")
 model_choice = st.sidebar.selectbox(
     "Select Model",
     list(models.keys())
@@ -80,7 +80,7 @@ model_choice = st.sidebar.selectbox(
 model = models[model_choice]
 
 st.sidebar.markdown("---")
-st.sidebar.caption("HeartGuard AI • ML-based risk analysis")
+st.sidebar.caption("HeartGuard AI -- ML-based risk analysis")
 
 # ============================ Helper ============================
 def safe_index(options, value):
@@ -88,7 +88,7 @@ def safe_index(options, value):
 
 # ============================ User Input ============================
 def user_input_form(df):
-    st.subheader("👤 Patient Information")
+    st.subheader("Patient Information")
     inputs = {}
 
     c1, c2, c3, c4 = st.columns(4)
@@ -116,7 +116,7 @@ def user_input_form(df):
         )
 
     st.divider()
-    st.subheader("🫀 Cardiac Data")
+    st.subheader("Cardiac Data")
 
     c5, c6, c7, c8 = st.columns(4)
 
@@ -147,7 +147,7 @@ def user_input_form(df):
         )
 
     st.divider()
-    st.subheader("🧪 Medical History")
+    st.subheader("Medical History")
 
     c9, c10, c11, c12 = st.columns(4)
 
@@ -188,12 +188,13 @@ def user_input_form(df):
     user_df = pd.DataFrame([inputs])
     return user_df[FEATURE_NAMES]
 
+
 user_df = user_input_form(df)
 
 # ============================ Prediction ============================
 st.divider()
 
-if st.button("🚀 Analyze Heart Disease Risk", use_container_width=True):
+if st.button("Analyze Heart Disease Risk", use_container_width=True):
     st.session_state.analyzed = True
 
     try:
@@ -205,9 +206,9 @@ if st.button("🚀 Analyze Heart Disease Risk", use_container_width=True):
             probability = model.predict_proba(scaled_input)[0][1]
 
         if prediction == 1:
-            st.error("⚠️ High Risk of Heart Disease Detected")
+            st.error("High risk of heart disease detected")
         else:
-            st.success("✅ Low Risk of Heart Disease")
+            st.success("Low risk of heart disease detected")
 
         if probability is not None:
             st.metric("Risk Probability", f"{probability:.2%}")
@@ -218,11 +219,11 @@ if st.button("🚀 Analyze Heart Disease Risk", use_container_width=True):
 
 # ============================ Model Analytics ============================
 if st.session_state.analyzed:
-    with st.expander("📊 Model Performance Analytics"):
+    with st.expander("Model Performance Analytics"):
         X = df[FEATURE_NAMES]
         y = df[TARGET_COL]
 
-        X_train, X_test, y_train, y_test = train_test_split(
+        _, X_test, _, y_test = train_test_split(
             X, y, test_size=0.2, random_state=42
         )
 
@@ -234,23 +235,70 @@ if st.session_state.analyzed:
         )
 
         with tab1:
-            st.pyplot(plot_confusion_matrix(y_test, y_pred, model_choice))
+            fig = plot_confusion_matrix(y_test, y_pred, model_choice)
+            st.pyplot(fig, use_container_width=True)
 
         with tab2:
             if hasattr(model, "predict_proba"):
                 y_probs = model.predict_proba(X_test_scaled)[:, 1]
-                st.pyplot(plot_roc_curve(y_test, y_probs, model_choice))
+                fig = plot_roc_curve(y_test, y_probs, model_choice)
+                st.pyplot(fig, use_container_width=True)
             else:
                 st.info("ROC Curve not available for this model")
 
         with tab3:
             if model_choice == "Random Forest":
-                st.pyplot(
-                    plot_feature_importance(
-                        model.feature_importances_,
-                        FEATURE_NAMES,
-                        model_choice
-                    )
+                fig = plot_feature_importance(
+                    model.feature_importances_,
+                    FEATURE_NAMES,
+                    model_choice
                 )
+                st.pyplot(fig, use_container_width=True)
             else:
                 st.info("Feature importance available only for Random Forest")
+
+# ============================ Help Section ============================
+st.divider()
+st.subheader("Parameter Help Guide")
+
+with st.expander("View detailed explanation of medical parameters"):
+    st.markdown("""
+    ### Chest Pain Type (cp)
+    - **0**: Typical angina – chest pain related to reduced blood flow to the heart  
+    - **1**: Atypical angina – chest pain not strongly linked to heart disease  
+    - **2**: Non-anginal pain – pain unrelated to the heart  
+    - **3**: Asymptomatic – no chest pain, but disease may still be present  
+
+    ### Max Heart Rate Achieved (thalach)
+    - Maximum heart rate recorded during exercise testing  
+    - Lower values may indicate reduced heart performance  
+
+    ### Exercise Induced Angina (exang)
+    - **0**: No chest pain during exercise  
+    - **1**: Chest pain occurs during physical activity  
+
+    ### ST Depression (oldpeak)
+    - Depression of ST segment during exercise  
+    - Higher values indicate higher risk of heart disease  
+
+    ### Fasting Blood Sugar > 120 mg/dl (fbs)
+    - **0**: Blood sugar ≤ 120 mg/dl  
+    - **1**: Blood sugar > 120 mg/dl  
+    - High fasting sugar is linked to cardiovascular risk  
+
+    ### Resting ECG Results (restecg)
+    - **0**: Normal  
+    - **1**: ST-T wave abnormality  
+    - **2**: Left ventricular hypertrophy  
+
+    ### ST Slope (slope)
+    - **0**: Upsloping – generally lower risk  
+    - **1**: Flat – moderate risk  
+    - **2**: Downsloping – higher risk  
+
+    ### Thalassemia (thal)
+    - **0**: Normal  
+    - **1**: Fixed defect – no blood flow improvement  
+    - **2**: Reversible defect – blood flow improves with rest  
+    - **3**: Unknown  
+    """)
