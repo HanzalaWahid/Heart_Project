@@ -6,21 +6,26 @@ def load_data(file_path = 'data/heart.csv' , target_column = 'target' ):
     df = pd.read_csv(file_path)
     return df
 
-def preprocess_data (df , target_column = 'target' , scale = True):
-    X = df.drop(target_column, axis=1)
-    Y = df[target_column]
+def preprocess_data(df, target_column="target", scale=True):
+    X = df.drop(columns=[target_column])
+    y = df[target_column]
 
-    # Handle class imbalance with stratify
-    X_train, X_test, Y_train, Y_test = train_test_split(
-        X, Y, test_size=0.2, random_state=42, stratify=Y)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
 
-    # Feature scaling
     scaler = None
     if scale:
         scaler = StandardScaler()
-        X_train = scaler.fit_transform(X_train)
-        X_test = scaler.transform(X_test)
+        X_train = pd.DataFrame(
+            scaler.fit_transform(X_train),
+            columns=X.columns,
+            index=X_train.index
+        )
+        X_test = pd.DataFrame(
+            scaler.transform(X_test),
+            columns=X.columns,
+            index=X_test.index
+        )
 
-    return X_train, X_test, Y_train, Y_test, scaler
-    
-    
+    return X_train, X_test, y_train, y_test, scaler

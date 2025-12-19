@@ -1,4 +1,4 @@
-# ==================== Imports ====================
+# ============================ Imports ============================
 import streamlit as st
 import pandas as pd
 import joblib
@@ -10,236 +10,235 @@ from src.visualize import (
     plot_feature_importance
 )
 
-# ==================== Page Config ====================
+from sklearn.model_selection import train_test_split
+
+# ============================ Page Config ============================
 st.set_page_config(
-    page_title="HeartGuard AI | Predictive Analytics",
+    page_title="HeartGuard AI | Heart Disease Prediction",
     page_icon="❤️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ==================== Paths ====================
+# ============================ Paths ============================
 BASE_DIR = Path(__file__).resolve().parent
-MODEL_DIR = BASE_DIR / "models"
 DATA_PATH = BASE_DIR / "data" / "heart.csv"
+MODEL_DIR = BASE_DIR / "models"
 
-# ==================== Resource Loading ====================
-@st.cache_resource
+# ============================ Safe Loaders ============================
+@st.cache_resource(show_spinner=False)
 def load_models_and_scaler():
-    models = {
-        "Logistic Regression": MODEL_DIR / "logistic_regression_model.pkl",
-        "Random Forest": MODEL_DIR / "random_forest_model.pkl",
-        "SVM": MODEL_DIR / "svm_model.pkl",
+    model_files = {
+        "Logistic Regression": "logistic_regression_model.pkl",
+        "Random Forest": "random_forest_model.pkl",
+        "SVM": "svm_model.pkl"
     }
 
-    loaded_models = {}
-    for name, path in models.items():
+    models = {}
+    for name, file in model_files.items():
+        path = MODEL_DIR / file
         if not path.exists():
-            raise FileNotFoundError(f"Missing model file: {path.name}")
-        loaded_models[name] = joblib.load(path)
+            raise FileNotFoundError(f"Model file missing: {file}")
+        models[name] = joblib.load(path)
 
     scaler_path = MODEL_DIR / "scaler.pkl"
     if not scaler_path.exists():
-        raise FileNotFoundError("Missing scaler.pkl")
+        raise FileNotFoundError("scaler.pkl not found")
 
     scaler = joblib.load(scaler_path)
-    return loaded_models, scaler
+    return models, scaler
 
 
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def load_dataset():
     if not DATA_PATH.exists():
-        raise FileNotFoundError("heart.csv not found")
+        raise FileNotFoundError("heart.csv not found in /data folder")
     return pd.read_csv(DATA_PATH)
 
 
-# ==================== Safe Load ====================
+# ============================ Startup ============================
 try:
     models, scaler = load_models_and_scaler()
     df = load_dataset()
 except Exception as e:
-    st.error(f"Startup Error: {e}")
+    st.error(f"Startup failed: {e}")
     st.stop()
 
-FEATURE_NAMES = df.drop(columns="target").columns.tolist()
+# ============================ Feature Schema ============================
+TARGET_COL = "target"
+FEATURE_NAMES = df.drop(columns=[TARGET_COL]).columns.tolist()
 
-# ==================== Sidebar ====================
-st.sidebar.title("Configuration")
+# ============================ Sidebar ============================
+st.sidebar.title("⚙️ Configuration")
 model_choice = st.sidebar.selectbox(
-    "Select Prediction Model",
+    "Select Model",
     list(models.keys())
 )
 model = models[model_choice]
 
-# ==================== Input Builder ====================
+st.sidebar.markdown("---")
+st.sidebar.caption("HeartGuard AI • ML-based risk analysis")
+
+# ============================ Helper ============================
 def safe_index(options, value):
     return options.index(value) if value in options else 0
 
-
-def user_input_form(dataframe):
+# ============================ User Input ============================
+def user_input_form(df):
     st.subheader("👤 Patient Information")
     inputs = {}
 
-    cols = st.columns(4)
-    with cols[0]:
+    c1, c2, c3, c4 = st.columns(4)
+
+    with c1:
         inputs["age"] = st.number_input(
-            "Age",
-            1, 120,
-            int(dataframe["age"].median())
+            "Age", 1, 120, int(df["age"].median())
         )
 
-    with cols[1]:
-        sex_val = int(dataframe["sex"].median())
+    with c2:
         options = [0, 1]
         inputs["sex"] = st.selectbox(
             "Sex",
             options,
-            index=safe_index(options, sex_val),
+            index=safe_index(options, int(df["sex"].median())),
             format_func=lambda x: "Male" if x else "Female"
         )
 
-    with cols[2]:
+    with c3:
         inputs["trestbps"] = st.number_input(
-            "Resting BP",
-            50, 300,
-            int(dataframe["trestbps"].median())
+            "Resting BP (mm Hg)", 50, 300, int(df["trestbps"].median())
         )
 
-    with cols[3]:
+    with c4:
         inputs["chol"] = st.number_input(
-            "Cholesterol",
-            100, 600,
-            int(dataframe["chol"].median())
+            "Cholesterol (mg/dl)", 100, 600, int(df["chol"].median())
         )
 
     st.divider()
     st.subheader("🫀 Cardiac Data")
 
-    cols = st.columns(4)
-    with cols[0]:
+    c5, c6, c7, c8 = st.columns(4)
+
+    with c5:
         inputs["cp"] = st.selectbox(
             "Chest Pain Type",
             [0, 1, 2, 3],
-            index=safe_index([0, 1, 2, 3], int(dataframe["cp"].median()))
+            index=safe_index([0, 1, 2, 3], int(df["cp"].median()))
         )
 
-    with cols[1]:
+    with c6:
         inputs["thalach"] = st.number_input(
-            "Max Heart Rate",
-            50, 250,
-            int(dataframe["thalach"].median())
+            "Max Heart Rate", 50, 250, int(df["thalach"].median())
         )
 
-    with cols[2]:
+    with c7:
         inputs["exang"] = st.selectbox(
             "Exercise Angina",
             [0, 1],
-            index=safe_index([0, 1], int(dataframe["exang"].median())),
+            index=safe_index([0, 1], int(df["exang"].median())),
             format_func=lambda x: "Yes" if x else "No"
         )
 
-    with cols[3]:
+    with c8:
         inputs["oldpeak"] = st.number_input(
-            "ST Depression",
-            0.0, 10.0,
-            float(dataframe["oldpeak"].median()),
-            step=0.1
+            "ST Depression", 0.0, 10.0,
+            float(df["oldpeak"].median()), step=0.1
         )
 
     st.divider()
     st.subheader("🧪 Medical History")
 
-    cols = st.columns(4)
-    with cols[0]:
+    c9, c10, c11, c12 = st.columns(4)
+
+    with c9:
         inputs["fbs"] = st.selectbox(
-            "Fasting BS > 120",
+            "Fasting Blood Sugar > 120",
             [0, 1],
-            index=safe_index([0, 1], int(dataframe["fbs"].median()))
+            index=safe_index([0, 1], int(df["fbs"].median()))
         )
 
-    with cols[1]:
+    with c10:
         inputs["restecg"] = st.selectbox(
             "Rest ECG",
             [0, 1, 2],
-            index=safe_index([0, 1, 2], int(dataframe["restecg"].median()))
+            index=safe_index([0, 1, 2], int(df["restecg"].median()))
         )
 
-    with cols[2]:
+    with c11:
         inputs["slope"] = st.selectbox(
             "ST Slope",
             [0, 1, 2],
-            index=safe_index([0, 1, 2], int(dataframe["slope"].median()))
+            index=safe_index([0, 1, 2], int(df["slope"].median()))
         )
 
-    with cols[3]:
+    with c12:
         inputs["thal"] = st.selectbox(
             "Thalassemia",
             [0, 1, 2, 3],
-            index=safe_index([0, 1, 2, 3], int(dataframe["thal"].median()))
+            index=safe_index([0, 1, 2, 3], int(df["thal"].median()))
         )
 
     inputs["ca"] = st.selectbox(
         "Major Vessels Colored",
         [0, 1, 2, 3],
-        index=safe_index([0, 1, 2, 3], int(dataframe["ca"].median()))
+        index=safe_index([0, 1, 2, 3], int(df["ca"].median()))
     )
 
-    df_input = pd.DataFrame([inputs])
-    return df_input[FEATURE_NAMES]
+    user_df = pd.DataFrame([inputs])
+    return user_df[FEATURE_NAMES]
 
 
 user_df = user_input_form(df)
 
-# ==================== Prediction ====================
+# ============================ Prediction ============================
 st.divider()
-if st.button("🚀 Analyze Risk", use_container_width=True):
+
+if st.button("🚀 Analyze Heart Disease Risk", use_container_width=True):
     try:
-        scaled = scaler.transform(user_df.values)
-        pred = model.predict(scaled)[0]
+        scaled_input = scaler.transform(user_df)
+        prediction = model.predict(scaled_input)[0]
 
-        prob = (
-            model.predict_proba(scaled)[0][1]
-            if hasattr(model, "predict_proba")
-            else None
-        )
+        probability = None
+        if hasattr(model, "predict_proba"):
+            probability = model.predict_proba(scaled_input)[0][1]
 
-        if pred:
-            st.error("⚠️ High Risk of Heart Disease")
+        if prediction == 1:
+            st.error("⚠️ High Risk of Heart Disease Detected")
         else:
-            st.success("✅ Low Risk Detected")
+            st.success("✅ Low Risk of Heart Disease")
 
-        if prob is not None:
-            st.metric("Risk Probability", f"{prob:.2%}")
-            st.progress(prob)
+        if probability is not None:
+            st.metric("Risk Probability", f"{probability:.2%}")
+            st.progress(probability)
 
     except Exception as e:
-        st.error(f"Prediction failed: {e}")
+        st.error(f"Prediction error: {e}")
 
-# ==================== Analytics ====================
-with st.expander("📊 Model Analytics"):
-    from sklearn.model_selection import train_test_split
-
+# ============================ Model Analytics ============================
+with st.expander("📊 Model Performance Analytics"):
     X = df[FEATURE_NAMES]
-    y = df["target"]
+    y = df[TARGET_COL]
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
-    X_test_scaled = scaler.transform(X_test.values)
+    X_test_scaled = scaler.transform(X_test)
     y_pred = model.predict(X_test_scaled)
 
-    tab1, tab2, tab3 = st.tabs(["Confusion Matrix", "ROC", "Importance"])
+    tab1, tab2, tab3 = st.tabs(
+        ["Confusion Matrix", "ROC Curve", "Feature Importance"]
+    )
 
     with tab1:
         st.pyplot(plot_confusion_matrix(y_test, y_pred, model_choice))
 
     with tab2:
         if hasattr(model, "predict_proba"):
-            probs = model.predict_proba(X_test_scaled)[:, 1]
-            st.pyplot(plot_roc_curve(y_test, probs, model_choice))
+            y_probs = model.predict_proba(X_test_scaled)[:, 1]
+            st.pyplot(plot_roc_curve(y_test, y_probs, model_choice))
         else:
-            st.info("ROC not supported for this model")
+            st.info("ROC Curve not available for this model")
 
     with tab3:
         if model_choice == "Random Forest":
@@ -251,4 +250,4 @@ with st.expander("📊 Model Analytics"):
                 )
             )
         else:
-            st.info("Feature importance only for Random Forest")
+            st.info("Feature importance available only for Random Forest")

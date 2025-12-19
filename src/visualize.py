@@ -54,7 +54,14 @@ def plot_feature_importance(importances, feature_names, model_name="Random Fores
     fig, ax = plt.subplots(figsize=(8, 6))
     
     # Fixed deprecation warning by assigning hue to x (or y) and legend=False
-    sns.barplot(x="Importance", y="Feature", data=df_imp, ax=ax, hue="Feature",legend=False, palette="viridis")
+    sns.barplot(
+    x="Importance",
+    y="Feature",
+    data=df_imp,
+    ax=ax,
+    palette="viridis"
+)
+
     
     ax.set_title(f"Feature Importance - {model_name}", fontsize=14, pad=15, fontweight='bold', color="#333333")
     ax.set_xlabel("Importance Score", fontsize=12, labelpad=10, fontweight='bold')
