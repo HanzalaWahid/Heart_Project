@@ -20,6 +20,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ============================ Session State ============================
+if "analyzed" not in st.session_state:
+    st.session_state.analyzed = False
+
 # ============================ Paths ============================
 BASE_DIR = Path(__file__).resolve().parent
 DATA_PATH = BASE_DIR / "data" / "heart.csv"
@@ -54,7 +58,6 @@ def load_dataset():
     if not DATA_PATH.exists():
         raise FileNotFoundError("heart.csv not found in /data folder")
     return pd.read_csv(DATA_PATH)
-
 
 # ============================ Startup ============================
 try:
@@ -91,9 +94,7 @@ def user_input_form(df):
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        inputs["age"] = st.number_input(
-            "Age", 1, 120, int(df["age"].median())
-        )
+        inputs["age"] = st.number_input("Age", 1, 120, int(df["age"].median()))
 
     with c2:
         options = [0, 1]
@@ -187,13 +188,14 @@ def user_input_form(df):
     user_df = pd.DataFrame([inputs])
     return user_df[FEATURE_NAMES]
 
-
 user_df = user_input_form(df)
 
 # ============================ Prediction ============================
 st.divider()
 
 if st.button("🚀 Analyze Heart Disease Risk", use_container_width=True):
+    st.session_state.analyzed = True
+
     try:
         scaled_input = scaler.transform(user_df)
         prediction = model.predict(scaled_input)[0]
@@ -215,39 +217,40 @@ if st.button("🚀 Analyze Heart Disease Risk", use_container_width=True):
         st.error(f"Prediction error: {e}")
 
 # ============================ Model Analytics ============================
-with st.expander("📊 Model Performance Analytics"):
-    X = df[FEATURE_NAMES]
-    y = df[TARGET_COL]
+if st.session_state.analyzed:
+    with st.expander("📊 Model Performance Analytics"):
+        X = df[FEATURE_NAMES]
+        y = df[TARGET_COL]
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42
+        )
 
-    X_test_scaled = scaler.transform(X_test)
-    y_pred = model.predict(X_test_scaled)
+        X_test_scaled = scaler.transform(X_test)
+        y_pred = model.predict(X_test_scaled)
 
-    tab1, tab2, tab3 = st.tabs(
-        ["Confusion Matrix", "ROC Curve", "Feature Importance"]
-    )
+        tab1, tab2, tab3 = st.tabs(
+            ["Confusion Matrix", "ROC Curve", "Feature Importance"]
+        )
 
-    with tab1:
-        st.pyplot(plot_confusion_matrix(y_test, y_pred, model_choice))
+        with tab1:
+            st.pyplot(plot_confusion_matrix(y_test, y_pred, model_choice))
 
-    with tab2:
-        if hasattr(model, "predict_proba"):
-            y_probs = model.predict_proba(X_test_scaled)[:, 1]
-            st.pyplot(plot_roc_curve(y_test, y_probs, model_choice))
-        else:
-            st.info("ROC Curve not available for this model")
+        with tab2:
+            if hasattr(model, "predict_proba"):
+                y_probs = model.predict_proba(X_test_scaled)[:, 1]
+                st.pyplot(plot_roc_curve(y_test, y_probs, model_choice))
+            else:
+                st.info("ROC Curve not available for this model")
 
-    with tab3:
-        if model_choice == "Random Forest":
-            st.pyplot(
-                plot_feature_importance(
-                    model.feature_importances_,
-                    FEATURE_NAMES,
-                    model_choice
+        with tab3:
+            if model_choice == "Random Forest":
+                st.pyplot(
+                    plot_feature_importance(
+                        model.feature_importances_,
+                        FEATURE_NAMES,
+                        model_choice
+                    )
                 )
-            )
-        else:
-            st.info("Feature importance available only for Random Forest")
+            else:
+                st.info("Feature importance available only for Random Forest")
