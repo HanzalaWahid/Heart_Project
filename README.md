@@ -90,26 +90,86 @@ streamlit run app.py
 
 The application will automatically open in your default browser at `http://localhost:8501`.
 
-## 📊 Dataset Details
 
-The model is trained on the **Cleveland Heart Disease Dataset** from the UCI Machine Learning Repository. It contains 14 key attributes:
-- **Age, Sex**
-- **CP**: Chest pain type (4 values)
-- **Trestbps**: Resting blood pressure
-- **Chol**: Serum cholestoral in mg/dl
-- **Fbs**: Fasting blood sugar > 120 mg/dl
-- **Restecg**: Resting electrocardiographic results (values 0,1,2)
-- **Thalach**: Maximum heart rate achieved
-- **Exang**: Exercise induced angina
-- **Oldpeak**: ST depression induced by exercise relative to rest
-- **Slope**: The slope of the peak exercise ST segment
-- **Ca**: Number of major vessels (0-3) colored by flourosopy
-- **Thal**: Thalassemia status
+## 🏗️ Working & Process
 
-## 🤝 Contributing
+### 1. Data Loading & Preprocessing
+- Loads `heart.csv` dataset and splits into train/test sets.
+- Features are scaled for model training and prediction.
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### 2. Model Training (`train_v2.py`)
+- Trains Logistic Regression, Random Forest, and SVM models with hyperparameter tuning.
+- Builds an ensemble model for consensus prediction.
+- Evaluates models (accuracy, confusion matrix, ROC AUC).
+- Saves models and scaler in `models/`.
 
-## 📜 License
+### 3. Web Application (`app.py` & `main.py`)
+- `app.py`: Main Streamlit app for interactive prediction and analytics.
+- `main.py`: CLI launcher for the Streamlit app (runs `app.py` via Python, useful for deployment or automation).
+- Both run the same dashboard, but `main.py` is a wrapper for easier launching.
 
-This project is Developed by Muhammad Hanzala
+### 4. Prediction & Analytics
+- User inputs patient data in the app.
+- Selects model (Logistic Regression, Random Forest, SVM, Ensemble).
+- App predicts risk and shows probability/confidence.
+- Advanced analytics: confusion matrix, ROC curve, feature importance, EDA plots.
+
+### 5. Visualization
+- Professional plots for model diagnostics and data insights.
+- Includes confusion matrix, ROC curve, feature importance, correlation heatmap, target distribution, and heart rate vs age scatter.
+
+### 6. Evaluation
+- Prints accuracy, confusion matrix, classification report, and ROC AUC for each model.
+
+## ⚡ Difference: `app.py` vs `main.py`
+
+- `app.py`: Directly run with `streamlit run app.py` for development and local use.
+- `main.py`: Python script that launches the Streamlit app programmatically (useful for automation, deployment, or when you want to run with `python main.py`).
+- Both show the same dashboard; `main.py` is just a convenience wrapper.
+
+---
+
+## ❓ One-Liner Questions & Answers
+
+1. **What dataset is used for heart disease prediction?**  
+   Cleveland Heart Disease Dataset (`data/heart.csv`).
+2. **Which models are trained in this project?**  
+   Logistic Regression, Random Forest, SVM, and Ensemble.
+3. **What is the role of the ensemble model?**  
+   Combines predictions from multiple models for better accuracy.
+4. **How is data preprocessing handled?**  
+   Features are scaled using StandardScaler in `preprocess.py`.
+5. **Which Python library powers the web interface?**  
+   Streamlit.
+6. **What does the confusion matrix show?**  
+   Model accuracy for healthy vs diseased predictions.
+7. **How is feature importance visualized?**  
+   Bar plot in the analytics tab (Random Forest only).
+8. **What metric indicates model discrimination ability?**  
+   ROC AUC score.
+9. **How are models saved for later use?**  
+   Using Joblib in the `models/` folder.
+10. **What does the ROC curve represent?**  
+    Trade-off between true positive and false positive rates.
+11. **How is user input collected in the app?**  
+    Through interactive form fields in Streamlit.
+12. **What is the purpose of the scaler?**  
+    Normalizes features for model training and prediction.
+13. **Which file contains model training logic?**  
+    `train_v2.py` and `src/model.py`.
+14. **How is model evaluation performed?**  
+    Using accuracy, confusion matrix, classification report, ROC AUC.
+15. **What does the correlation heatmap display?**  
+    Relationships between clinical features.
+16. **How can you launch the web app?**  
+    `streamlit run app.py` or `python main.py`.
+17. **What does the target variable represent?**  
+    Presence (1) or absence (0) of heart disease.
+18. **How is hyperparameter tuning performed?**  
+    GridSearchCV/RandomizedSearchCV in model training functions.
+19. **What is the significance of the `main.py` file?**  
+    Provides a Pythonic way to launch the Streamlit app.
+20. **How are advanced analytics accessed in the app?**  
+    Via the "Advanced Analytics & Data Insights" expander/tab in the dashboard.
+
+---
